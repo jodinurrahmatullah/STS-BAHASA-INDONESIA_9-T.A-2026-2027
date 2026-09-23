@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STS Ganjil B. Indonesia Kls 9 - SMPN 38 Bandar Lampung</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; user-select: none; -webkit-user-select: none; }
+        /* Mencegah highlight teks untuk meminimalisir copy paste */
+        ::selection { background: transparent; }
+        
+        /* Layout untuk ujian */
+        .exam-container { height: 100vh; display: flex; flex-direction: column; }
+        .scrollable-content { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 40; }
+        
+        /* Floating Camera & Controls */
+        #camera-preview-container { position: fixed; top: 10px; right: 10px; z-index: 50; transition: all 0.3s ease; }
+        #camera-preview { width: 80px; height: 100px; background: #000; border-radius: 8px; border: 2px solid #ef4444; object-fit: cover; }
+        .cam-minimized #camera-preview { width: 36px; height: 36px; border-radius: 50%; }
+        
+        /* Anti screenshot blur (membantu menutupi layar saat jendela tidak fokus) */
+        .blur-screen { filter: blur(20px) grayscale(100%); pointer-events: none; }
+
+        /* Dynamic Font Sizing Classes */
+        .font-size-sm { font-size: 0.875rem !important; line-height: 1.25rem !important; }
+        .font-size-md { font-size: 1rem !important; line-height: 1.5rem !important; }
+        .font-size-lg { font-size: 1.125rem !important; line-height: 1.75rem !important; }
+        .font-size-xl { font-size: 1.25rem !important; line-height: 1.875rem !important; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="text-gray-800 antialiased overflow-hidden">
+
+<script>
+    // ==========================================
+    // MASUKKAN URL GOOGLE APPS SCRIPT ANDA DI SINI
+    // ==========================================
+    const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwYDATysyyOlZvhrJsI4JeVaIY_g__1b-iblOG4bYO3QH3RlnhDGvVhuYRS_klDgsmMng/exec"; 
+
+    // DATA SOAL (50 Soal Sesuai Kurikulum Merdeka)
+    const questionsData = [
+        {
+            id: 1,
+            passage: "<b>Perpustakaan Sekolah</b><br>Perpustakaan sekolahku terletak di sebelah ruang guru. Ruangan itu tidak terlalu luas, tetapi sangat nyaman. Dindingnya dicat biru muda sehingga memberikan kesan tenang. Di sepanjang dinding terdapat rak-rak buku yang tersusun rapi. Buku pelajaran, novel, ensiklopedia, dan berbagai buku pengetahuan tersedia di sana.<br><br>Di tengah ruangan terdapat beberapa meja dan kursi yang dapat digunakan siswa untuk membaca. Udara di dalam perpustakaan terasa sejuk karena terdapat dua jendela besar. Setiap pagi, cahaya matahari masuk melalui jendela dan membuat ruangan tampak terang.",
+            question: "Objek yang dideskripsikan dalam teks tersebut adalah ....",
+            options: ["A. ruang guru", "B. perpustakaan sekolah", "C. ruang kelas", "D. halaman sekolah"],
+            answer: "B",
+            alasan: "Fokus utama teks menceritakan letak, kondisi, dan suasana perpustakaan sekolah."
+        },
+        { id: 2, question: "Bagaimana suasana perpustakaan berdasarkan teks?", options: ["A. Gelap dan berisik", "B. Panas dan sempit", "C. Nyaman dan tenang", "D. Ramai dan kotor"], answer: "C", alasan: "Di paragraf pertama disebutkan ruangan tersebut tidak terlalu luas tetapi 'sangat nyaman' dan memberikan kesan 'tenang'." },
+        { id: 3, question: "Kalimat yang menunjukkan penggunaan pancaindra penglihatan adalah ....", options: ["A. Udara di dalam perpustakaan terasa sejuk.", "B. Ruangan itu tidak terlalu luas.", "C. Dindingnya dicat biru muda.", "D. Siswa menggunakan meja untuk membaca."], answer: "C", alasan: "Warna 'biru muda' dapat ditangkap oleh indra penglihatan (mata)." },
+        { id: 4, question: "Tujuan penulis menggambarkan warna dinding perpustakaan adalah ....", options: ["A. menjelaskan harga cat", "B. memberikan gambaran visual tentang ruangan", "C. menjelaskan cara mengecat dinding", "D. menceritakan sejarah perpustakaan"], answer: "B", alasan: "Ciri teks deskripsi adalah membuat pembaca seolah-olah melihat objek secara langsung." },
+        { id: 5, question: "Ide pokok paragraf kedua adalah ....", options: ["A. jenis buku yang tersedia", "B. letak perpustakaan sekolah", "C. kondisi dan suasana di dalam perpustakaan", "D. kegiatan guru di perpustakaan"], answer: "C", alasan: "Paragraf 2 fokus membahas tata letak meja kursi, udara yang sejuk, dan pencahayaan ruangan." },
+        {
+            id: 6,
+            passage: "<b>Pantai Pahawang</b><br>Pantai Pahawang memiliki pemandangan yang sangat indah. Air lautnya jernih dengan warna biru kehijauan. Pasir putih membentang di sepanjang garis pantai. Di kejauhan tampak pulau-pulau kecil yang ditumbuhi pepohonan hijau.<br><br>Ketika berdiri di tepi pantai, angin laut terasa sejuk menerpa wajah. Suara deburan ombak terdengar lembut dan membuat suasana semakin menenangkan. Keindahan bawah lautnya juga menarik perhatian wisatawan.",
+            question: "Sudut pandang yang digunakan dalam teks tersebut adalah ....", options: ["A. orang pertama pelaku utama", "B. orang pertama pelaku sampingan", "C. orang ketiga", "D. orang kedua"], answer: "C", alasan: "Penulis berada di luar cerita dan bertindak sebagai pengamat yang menggambarkan keadaan pantai secara objektif."
+        },
+        { id: 7, question: "Bukti bahwa teks menggunakan sudut pandang orang ketiga adalah ....", options: ["A. penggunaan kata 'aku'", "B. penggunaan kata 'kami'", "C. penulis menceritakan objek dari luar tokoh", "D. penulis menceritakan pengalaman pribadinya"], answer: "C", alasan: "Tidak ada kata ganti orang pertama, penulis murni mendeskripsikan objek wisata tersebut." },
+        { id: 8, question: "Informasi yang sesuai dengan teks adalah ....", options: ["A. Air laut Pantai Pahawang berwarna cokelat.", "B. Pantai Pahawang memiliki pasir hitam.", "C. Pantai Pahawang memiliki pemandangan bawah laut yang menarik.", "D. Pantai Pahawang tidak memiliki pulau kecil."], answer: "C", alasan: "Pada kalimat terakhir paragraf kedua disebutkan keindahan bawah lautnya menarik perhatian wisatawan." },
+        { id: 9, question: "Kata 'dan' pada kalimat 'Pasir putih membentang di sepanjang garis pantai dan pulau-pulau kecil tampak di kejauhan' merupakan konjungsi ....", options: ["A. pertentangan", "B. penambahan", "C. sebab", "D. tujuan"], answer: "B", alasan: "Konjungsi 'dan' berfungsi untuk menghubungkan atau menambahkan informasi setara." },
+        { id: 10, question: "Kalimat yang menggunakan konjungsi penambahan adalah ....", options: ["A. Rumah itu kecil tetapi nyaman.", "B. Halaman rumah bersih dan dipenuhi tanaman.", "C. Kami datang karena ingin melihat taman.", "D. Ia membaca buku setelah selesai belajar."], answer: "B", alasan: "Penggunaan kata 'dan' pada kalimat tersebut menyatakan hubungan penambahan/gabungan." },
+        { id: 11, question: "Konjungsi 'tetapi' digunakan untuk menyatakan hubungan ....", options: ["A. penambahan", "B. pilihan", "C. pertentangan", "D. sebab-akibat"], answer: "C", alasan: "Konjungsi tetapi, melainkan, sedangkan adalah konjungsi pertentangan." },
+        { id: 12, question: "Kalimat berikut yang menggunakan konjungsi sebab adalah ....", options: ["A. Taman itu indah dan bersih.", "B. Taman itu kecil tetapi nyaman.", "C. Taman terlihat asri karena dirawat dengan baik.", "D. Taman itu luas atau sempit."], answer: "C", alasan: "Kata 'karena' merupakan konjungsi kausalitas yang menyatakan sebab." },
+        { id: 13, question: "Kalimat yang tepat untuk melengkapi kalimat berikut adalah ....\n\"Pantai itu sangat indah, ... banyak wisatawan datang berkunjung.\"", options: ["A. sehingga", "B. tetapi", "C. atau", "D. sedangkan"], answer: "A", alasan: "Kata 'sehingga' menunjukkan akibat dari keindahan pantai tersebut." },
+        { id: 14, question: "\"Udara di pegunungan sejuk, ... pemandangannya sangat indah.\"\nKonjungsi yang tepat adalah ....", options: ["A. dan", "B. tetapi", "C. karena", "D. jika"], answer: "A", alasan: "Menambahkan informasi positif (sejuk ditambahkan dengan indah)." },
+        {
+            id: 15,
+            passage: "<b>Penggalan Lirik Lagu</b><br>\"Kau datang membawa cerita,<br>dan hari menjadi lebih cerah.<br>Walaupun hujan turun perlahan,<br>kita tetap berjalan bersama.\"",
+            question: "Konjungsi 'dan' dalam penggalan tersebut menyatakan ....", options: ["A. pertentangan", "B. penambahan", "C. sebab", "D. pilihan"], answer: "B", alasan: "Konjungsi 'dan' secara fungsi merupakan kata hubung penambahan."
+        },
+        { id: 16, question: "Kata 'walaupun' merupakan konjungsi yang menyatakan ....", options: ["A. pertentangan/konsesif", "B. penambahan", "C. tujuan", "D. waktu"], answer: "A", alasan: "'Walaupun' atau 'meskipun' adalah konjungsi konsesif yang menyatakan pertentangan/perlawanan terhadap keadaan." },
+        { id: 17, question: "Hubungan makna pada kalimat 'Walaupun hujan turun perlahan, kita tetap berjalan bersama' adalah ....", options: ["A. kegiatan berhenti karena hujan", "B. kegiatan tetap dilakukan meskipun ada keadaan yang menghambat", "C. hujan menyebabkan kegiatan dimulai", "D. kegiatan dilakukan sebelum hujan"], answer: "B", alasan: "Konjungsi konsesif menunjukkan suatu tindakan tetap terjadi terlepas dari hambatan (hujan)." },
+        { id: 18, question: "Jika konjungsi 'dan' pada lirik tersebut dihilangkan, hubungan antara kedua bagian kalimat menjadi ....", options: ["A. lebih jelas", "B. kurang menunjukkan hubungan penambahan", "C. berubah menjadi sebab-akibat", "D. berubah menjadi pertentangan"], answer: "B", alasan: "Tanpa konjungsi, kalimat menjadi asindeton dan hubungan antar klausanya menjadi samar/kurang tegas." },
+        { id: 19, question: "Kohesi dalam sebuah teks berkaitan dengan ....", options: ["A. keterkaitan bentuk bahasa antarkalimat", "B. panjang pendeknya teks", "C. jumlah paragraf", "D. jumlah kata dalam teks"], answer: "A", alasan: "Kohesi merujuk pada keterkaitan formal/bentuk (kata/kalimat) dalam sebuah teks." },
+        { id: 20, question: "Koherensi berkaitan dengan ....", options: ["A. penggunaan huruf kapital", "B. keterkaitan makna dan gagasan antarkalimat", "C. penggunaan tanda baca saja", "D. jumlah kata dalam paragraf"], answer: "B", alasan: "Koherensi adalah kepaduan makna sehingga teks terdengar logis dan nyambung." },
+        {
+            id: 21,
+            passage: "\"Rina membeli sebuah buku. Buku itu berisi cerita tentang petualangan.\"",
+            question: "Penggunaan kata 'buku itu' menunjukkan adanya ....", options: ["A. kohesi", "B. konflik", "C. argumentasi", "D. deskripsi waktu"], answer: "A", alasan: "Pengulangan referensi (buku -> buku itu) adalah bentuk kohesi leksikal."
+        },
+        {
+            id: 22,
+            passage: "\"Langit mendung. Tidak lama kemudian, hujan turun dengan deras.\"",
+            question: "Hubungan antarkalimat tersebut menunjukkan ....", options: ["A. koherensi sebab-akibat", "B. pertentangan", "C. pilihan", "D. penambahan"], answer: "A", alasan: "Secara makna, mendung berakibat pada turunnya hujan (koherensi logis)." },
+        { id: 23, question: "Paragraf yang memiliki koherensi baik adalah ....", options: ["A. Saya suka membaca. Sepeda saya berwarna merah. Hari ini hujan.", "B. Perpustakaan itu nyaman. Rak bukunya tertata rapi. Siswa betah membaca di sana.", "C. Pantai itu indah. Saya membeli sepatu. Buku itu sangat tebal.", "D. Rumah itu besar. Kucing tidur. Sekolah berada di kota."], answer: "B", alasan: "Hanya opsi B yang kalimat-kalimatnya memiliki keterkaitan makna (topik perpustakaan)." },
+        { id: 24, question: "Teks prosedur adalah teks yang berisi ....", options: ["A. gambaran suatu objek", "B. langkah-langkah melakukan atau membuat sesuatu", "C. cerita pengalaman seseorang", "D. pendapat tentang suatu masalah"], answer: "B", alasan: "Definisi teks prosedur adalah teks yang memandu langkah-langkah." },
+        { id: 25, question: "Tujuan utama teks prosedur adalah ....", options: ["A. menghibur pembaca", "B. menggambarkan suatu tempat", "C. memberikan petunjuk agar pembaca dapat melakukan sesuatu dengan benar", "D. menceritakan kejadian masa lalu"], answer: "C", alasan: "Fungsi sosial teks prosedur adalah memberikan instruksi/petunjuk." },
+        { id: 26, question: "Struktur umum teks prosedur adalah ....", options: ["A. orientasi, komplikasi, resolusi", "B. identifikasi, deskripsi bagian, simpulan", "C. tujuan, alat/bahan, langkah-langkah", "D. tesis, argumentasi, penegasan ulang"], answer: "C", alasan: "Struktur yang baku terdiri dari Tujuan, Material (alat/bahan), dan Langkah-langkah." },
+        { id: 27, question: "Kalimat yang tepat digunakan dalam teks prosedur adalah ....", options: ["A. Pantai itu sangat indah.", "B. Masukkan tepung ke dalam wadah.", "C. Aku sangat senang hari ini.", "D. Rumah itu memiliki halaman luas."], answer: "B", alasan: "Kalimat B merupakan kalimat imperatif (perintah) yang menjadi ciri khas teks prosedur." },
+        { id: 28, question: "Kata kerja imperatif terdapat pada kalimat ....", options: ["A. Air sedang mendidih.", "B. Adik membaca buku.", "C. Potong kertas sesuai pola.", "D. Kertas itu berwarna putih."], answer: "C", alasan: "Kata 'potong' merupakan bentuk perintah/imperatif." },
+        {
+            id: 29,
+            passage: "<b>Petikan Cerpen</b><br>\"Setelah menemukan beberapa lembar kertas bekas, Dita mengambil gunting dan lem. Ia kemudian memotong kertas tersebut menjadi bentuk-bentuk kecil. Potongan kertas itu ditempelkan pada sebuah karton hingga membentuk gambar bunga.\"",
+            question: "Kegiatan yang dilakukan Dita dapat diubah menjadi teks prosedur dengan judul ....", options: ["A. Pengalaman Dita", "B. Bunga Kesayangan Dita", "C. Cara Membuat Kolase dari Kertas Bekas", "D. Kertas Bekas di Rumah"], answer: "C", alasan: "Kegiatan memotong dan menempel kertas untuk membentuk gambar disebut membuat kolase."
+        },
+        { id: 30, question: "Langkah pertama yang tepat berdasarkan kutipan tersebut adalah ....", options: ["A. menempelkan potongan kertas", "B. mengambil kertas bekas, gunting, dan lem", "C. membuat gambar bunga", "D. membuang kertas"], answer: "B", alasan: "Menyiapkan alat dan bahan adalah langkah pertama sebelum pemrosesan." },
+        { id: 31, question: "Jika kutipan tersebut diubah menjadi teks prosedur, kalimat yang tepat adalah ....", options: ["A. Dita sangat senang membuat kolase.", "B. Dita mengambil gunting dan lem.", "C. Ambillah kertas bekas, gunting, dan lem.", "D. Kertas bekas itu milik Dita."], answer: "C", alasan: "Harus diubah ke dalam bentuk kalimat perintah (imperatif)." },
+        { id: 32, question: "Kata dalam bahasa Indonesia yang berasal atau diserap dari bahasa lain disebut ....", options: ["A. kata ulang", "B. kata serapan", "C. kata dasar", "D. kata tanya"], answer: "B", alasan: "Definisi kata serapan." },
+        { id: 33, question: "Salah satu tujuan penyerapan kosakata adalah ....", options: ["A. memperkaya kosakata bahasa Indonesia", "B. menghilangkan bahasa Indonesia", "C. mengurangi jumlah kata", "D. membuat semua kata menjadi asing"], answer: "A", alasan: "Penyerapan dilakukan untuk memperluas perbendaharaan kata seiring perkembangan zaman." },
+        { id: 34, question: "Kata 'televisi' merupakan contoh kata yang diserap dari bahasa ....", options: ["A. asing", "B. daerah saja", "C. Indonesia asli", "D. Melayu kuno saja"], answer: "A", alasan: "Televisi diserap dari bahasa Inggris (television) / asing." },
+        { id: 35, question: "Kata 'aktivitas' merupakan bentuk baku dari ....", options: ["A. aktifitas", "B. aktipitas", "C. aktivitas", "D. aktifitaz"], answer: "C", alasan: "Menurut KBBI, penulisannya menggunakan 'v', yaitu aktivitas (dari activity)." },
+        { id: 36, question: "Penulisan kata serapan yang tepat terdapat pada kalimat ....", options: ["A. Siswa melakukan aktifitas membaca.", "B. Siswa melakukan aktivitas membaca.", "C. Siswa melakukan aktipitas membaca.", "D. Siswa melakukan aktifitaz membaca."], answer: "B", alasan: "Sesuai dengan pedoman EYD dan KBBI." },
+        {
+            id: 37,
+            passage: "<b>Cara Membuat Penanda Buku</b><br>Alat dan bahan: Karton, Gunting, Penggaris, Pensil, Lem, Pita<br>Langkah-langkah:<br>1. Ukurlah karton dengan panjang 15 cm dan lebar 5 cm.<br>2. Potong karton sesuai ukuran.<br>3. Hias permukaan karton sesuai kreativitas.<br>4. Berikan lubang kecil pada bagian atas.<br>5. Masukkan pita melalui lubang.<br>6. Penanda buku siap digunakan.",
+            question: "Bahan utama yang digunakan untuk membuat penanda buku adalah ....", options: ["A. kain", "B. karton", "C. kayu", "D. plastik"], answer: "B", alasan: "Sesuai teks, bahan intinya adalah karton."
+        },
+        { id: 38, question: "Alat yang digunakan untuk mengukur karton adalah ....", options: ["A. gunting", "B. lem", "C. penggaris", "D. pita"], answer: "C", alasan: "Penggaris berfungsi untuk mengukur 15x5 cm." },
+        { id: 39, question: "Berapa ukuran karton yang digunakan?", options: ["A. 5 cm × 5 cm", "B. 10 cm × 5 cm", "C. 15 cm × 5 cm", "D. 15 cm × 10 cm"], answer: "C", alasan: "Tertulis jelas di langkah pertama: panjang 15 cm, lebar 5 cm." },
+        { id: 40, question: "Setelah karton dipotong sesuai ukuran, langkah berikutnya adalah ....", options: ["A. memasukkan pita", "B. menghias permukaan karton", "C. membuang karton", "D. membuat lubang"], answer: "B", alasan: "Sesuai langkah ke-3: hias permukaan karton." },
+        { id: 41, question: "Informasi yang dapat disimpulkan dari teks tersebut adalah ....", options: ["A. Penanda buku dibuat menggunakan karton dan pita.", "B. Penanda buku hanya dapat dibuat menggunakan plastik.", "C. Penanda buku tidak perlu dihias.", "D. Pembuatan penanda buku tidak memerlukan alat."], answer: "A", alasan: "Kesimpulan yang paling sesuai dengan material yang dijabarkan." },
+        {
+            id: 42,
+            passage: "<b>CARA MENJAGA KEBERSIHAN BUKU (Infografik)</b><br>1. Cuci tangan sebelum membaca.<br>2. Gunakan pembatas buku.<br>3. Jangan mencoret halaman.<br>4. Jauhkan buku dari air.<br>5. Simpan buku di tempat kering.",
+            question: "Tujuan infografik tersebut adalah ....", options: ["A. menjelaskan sejarah buku", "B. memberikan petunjuk merawat buku", "C. menjelaskan jenis-jenis buku", "D. menceritakan pengalaman membaca"], answer: "B", alasan: "Judulnya 'Cara Menjaga Kebersihan Buku', identik dengan merawat/memelihara."
+        },
+        { id: 43, question: "Berdasarkan infografik, tindakan yang harus dilakukan sebelum membaca adalah ....", options: ["A. mencoret halaman", "B. menyimpan buku", "C. mencuci tangan", "D. memberi air pada buku"], answer: "C", alasan: "Terdapat di poin pertama." },
+        { id: 44, question: "Mengapa buku harus dijauhkan dari air?", options: ["A. agar buku cepat selesai dibaca", "B. agar halaman buku tidak rusak", "C. agar buku menjadi berat", "D. agar tulisan menjadi lebih besar"], answer: "B", alasan: "Penalaran logis; air akan merusak kertas dan tinta pada buku." },
+        { id: 45, question: "Ciri yang membuat infografik mudah dipahami adalah ....", options: ["A. menggunakan paragraf yang sangat panjang", "B. menggunakan perpaduan informasi singkat dan visual", "C. tidak menggunakan judul", "D. menggunakan istilah yang sulit"], answer: "B", alasan: "Hakikat infografik adalah penyampaian prosedur lewat perpaduan visual dan teks pendek." },
+        { id: 46, question: "Membaca nyaring adalah kegiatan membaca dengan ....", options: ["A. suara yang dapat didengar oleh orang lain", "B. suara sangat pelan", "C. tanpa memperhatikan tanda baca", "D. hanya dalam hati"], answer: "A", alasan: "Definisi membaca nyaring adalah membaca bersuara agar didengar audiens." },
+        { id: 47, question: "Hal yang perlu diperhatikan saat membaca nyaring adalah ....", options: ["A. intonasi, pelafalan, volume, dan tanda baca", "B. kecepatan tanpa memperhatikan isi", "C. jumlah halaman", "D. warna sampul buku"], answer: "A", alasan: "Komponen vokal dan tanda baca sangat penting agar makna tersampaikan." },
+        { id: 48, question: "Ketika menemukan tanda koma (,) saat membaca nyaring, pembaca sebaiknya ....", options: ["A. berhenti sangat lama", "B. memberikan jeda sejenak", "C. menaikkan suara setinggi mungkin", "D. langsung berhenti membaca"], answer: "B", alasan: "Koma menandakan jeda pendek." },
+        { id: 49, question: "Langkah pertama yang tepat dalam membuat poster adalah ....", options: ["A. menentukan tema dan tujuan poster", "B. langsung mencetak poster", "C. menghapus semua tulisan", "D. memilih bingkai terlebih dahulu"], answer: "A", alasan: "Konsep awal (tema dan tujuan) adalah fondasi setiap karya." },
+        { id: 50, question: "Agar poster mudah dipahami oleh pembaca, sebaiknya ....", options: ["A. menggunakan judul yang jelas, gambar menarik, dan kalimat singkat", "B. menggunakan tulisan sangat kecil", "C. menggunakan kalimat panjang sebanyak mungkin", "D. menggunakan sebanyak mungkin warna tanpa aturan"], answer: "A", alasan: "Prinsip poster adalah eye-catching, persuasif, dan pesannya ringkas/padat." }
+    ];
+</script>
+
+<div id="app">
+    <!-- Kamera Preview (Melayang & Bisa Di-minimize) -->
+    <div id="camera-preview-container" class="hidden flex flex-col items-end">
+        <div class="flex items-center gap-1 bg-black bg-opacity-60 backdrop-blur rounded-t-md px-1 py-0.5 text-[10px] text-white">
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            <span id="cam-status-text">REC</span>
+            <button onclick="toggleCameraMinimize()" class="ml-1 text-white hover:text-yellow-400 font-bold px-1" title="Kecilkan/Besarkan Kamera">
+                <span id="cam-min-icon">➖</span>
+            </button>
+        </div>
+        <video id="camera-preview" autoplay muted playsinline></video>
+    </div>
+
+    <!-- Halaman Login -->
+    <div id="login-page" class="min-h-screen flex items-center justify-center p-4 relative z-10">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border-t-4 border-blue-600">
+            <h1 class="text-2xl font-bold text-center text-gray-800 mb-1">SUMATIF TENGAH SEMESTER (STS)</h1>
+            <h2 class="text-md font-semibold text-center text-gray-600 mb-4">Bahasa Indonesia Kelas 9<br><span class="text-xs font-normal text-gray-500">SMPN 38 Bandar Lampung • TP 2026/2027</span></h2>
+            
+            <!-- Banner Resume Ujian jika ada data tersimpan -->
+            <div id="resume-banner" class="hidden bg-emerald-50 border-l-4 border-emerald-500 p-3 mb-4 rounded text-xs text-emerald-800">
+                <p class="font-bold flex items-center gap-1">
+                    <span>💡</span> Terdeteksi Ujian Yang Belum Selesai!
+                </p>
+                <p class="mt-1">Sistem menemukan sesi ujian sebelumnya yang tersimpan.</p>
+                <button onclick="restoreSession()" class="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded shadow transition">
+                    Lanjutkan Ujian Sebelumnya
+                </button>
+            </div>
+
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-3 mb-5 text-sm text-yellow-800">
+                <p class="font-bold">PERHATIAN SISTEM KEAMANAN & FITUR UJIAN:</p>
+                <ul class="list-disc pl-5 mt-1 text-xs space-y-1">
+                    <li>Jawaban Anda tersimpan otomatis setiap kali memilih opsi.</li>
+                    <li>Sistem ujian berjalan dengan proteksi keamanan penuh.</li>
+                    <li>Dilarang berpindah aplikasi, ganti tab, atau mengambil tangkapan layar.</li>
+                    <li>Maksimal <b>3 kali</b> peringatan sebelum ujian dikumpulkan otomatis.</li>
+                </ul>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Lengkap Siswa</label>
+                    <input type="text" id="student-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 uppercase" placeholder="Masukkan nama..." required>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Kelas</label>
+                    <select id="student-class" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                        <option value="">-- Pilih Kelas --</option>
+                        <option value="9A">9 A</option>
+                        <option value="9B">9 B</option>
+                        <option value="9C">9 C</option>
+                        <option value="9D">9 D</option>
+                    </select>
+                </div>
+                <button onclick="requestExamPermissions()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition shadow-lg mt-2 flex items-center justify-center gap-2">
+                    <span>📝</span> Mulai Ujian Baru
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Halaman Ujian -->
+    <div id="exam-page" class="exam-container hidden bg-white">
+        <!-- Header Ujian -->
+        <div class="bg-slate-900 text-white p-3 flex justify-between items-center shadow-md z-20">
+            <div class="flex items-center gap-2">
+                <div>
+                    <div class="font-bold text-sm leading-tight" id="display-name">Nama</div>
+                    <div class="text-xs text-slate-300" id="display-class">Kelas</div>
+                </div>
+            </div>
+
+            <!-- Kontrol Font & Navigation Bar -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div class="bg-slate-800 p-1 rounded flex items-center border border-slate-700 text-xs">
+                    <span class="px-1 text-slate-400 font-bold hidden sm:inline">Ukuran Teks:</span>
+                    <button onclick="changeFontSize(-1)" class="px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded font-bold mr-1" title="Kecilkan Teks">A-</button>
+                    <button onclick="changeFontSize(1)" class="px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded font-bold" title="Besarkan Teks">A+</button>
+                </div>
+
+                <button onclick="toggleGrid()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded text-xs font-bold shadow flex items-center gap-1">
+                    <span>☰</span> <span class="hidden sm:inline">Daftar</span> Soal
+                </button>
+
+                <div class="text-center bg-red-600 px-2.5 py-1 rounded font-bold border border-red-500">
+                    <div class="text-[10px] uppercase text-red-100 leading-none">Sisa Waktu</div>
+                    <span id="timer-display" class="text-base font-mono leading-tight">90:00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Bar Ringkas (Statistik Jawaban) -->
+        <div class="bg-slate-100 border-b border-gray-200 px-4 py-1.5 flex justify-between items-center text-xs font-semibold text-gray-600">
+            <div class="flex gap-3">
+                <span class="text-green-700 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span> Dijawab: <b id="stat-answered">0</b></span>
+                <span class="text-yellow-700 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> Ragu: <b id="stat-doubt">0</b></span>
+                <span class="text-gray-500 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gray-300 border border-gray-400"></span> Belum: <b id="stat-unanswered">50</b></span>
+            </div>
+            <div class="text-blue-700">Progres: <b id="stat-percent">0%</b></div>
+        </div>
+
+        <!-- Area Soal -->
+        <div class="scrollable-content p-4 lg:px-24 bg-gray-50" id="question-area">
+            <!-- Render dinamis di sini -->
+        </div>
+
+        <!-- Navigasi Bawah -->
+        <div class="bottom-nav p-3 flex justify-between items-center gap-2">
+            <button id="btn-prev" onclick="changeQuestion(-1)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 sm:px-5 py-2 rounded-lg font-bold shadow disabled:opacity-40 text-sm">
+                &larr; <span class="hidden sm:inline">Sebelumnya</span>
+            </button>
+
+            <!-- Tombol Ragu-ragu -->
+            <button id="btn-doubt" onclick="toggleDoubt()" class="bg-yellow-100 border-2 border-yellow-500 text-yellow-800 hover:bg-yellow-200 px-3 sm:px-4 py-2 rounded-lg font-bold shadow text-sm flex items-center gap-1.5 transition">
+                <input type="checkbox" id="chk-doubt" class="w-4 h-4 text-yellow-600 rounded focus:ring-yellow-500 pointer-events-none">
+                <span>Ragu-Ragu</span>
+            </button>
+
+            <button id="btn-next" onclick="changeQuestion(1)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 rounded-lg font-bold shadow text-sm">
+                <span class="hidden sm:inline">Selanjutnya</span> &rarr;
+            </button>
+            <button id="btn-finish" onclick="confirmSubmit()" class="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 py-2 rounded-lg font-bold shadow hidden text-sm flex items-center gap-1">
+                <span>✔</span> SELESAI UJIAN
+            </button>
+        </div>
+
+        <!-- Modal Daftar Soal -->
+        <div id="grid-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+                <div class="p-3 bg-slate-800 text-white font-bold border-b flex justify-between items-center">
+                    <span class="flex items-center gap-2"><span>📱</span> Navigasi Lembar Soal</span>
+                    <button onclick="toggleGrid()" class="text-gray-300 hover:text-white font-bold text-xl px-2">&times;</button>
+                </div>
+                <div class="p-4 overflow-y-auto grid grid-cols-5 sm:grid-cols-10 gap-2" id="grid-container">
+                    <!-- Dinamis -->
+                </div>
+                <div class="p-3 bg-gray-50 border-t flex flex-wrap gap-3 text-xs justify-center font-medium">
+                    <span class="flex items-center"><div class="w-3 h-3 bg-green-500 rounded mr-1"></div> Terjawab</span>
+                    <span class="flex items-center"><div class="w-3 h-3 bg-yellow-400 rounded mr-1"></div> Ragu-ragu</span>
+                    <span class="flex items-center"><div class="w-3 h-3 bg-white border border-gray-400 rounded mr-1"></div> Belum</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Halaman Hasil & Pembahasan -->
+    <div id="result-page" class="hidden min-h-screen p-4 bg-gray-100 pb-10">
+        <div class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6 text-center border-t-4 border-green-500 relative">
+                <h2 class="text-2xl font-bold mb-2">Ujian Selesai</h2>
+                <p class="text-gray-600 mb-4">Terima kasih, data Anda telah disimpan ke server.</p>
+                
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="bg-green-50 p-3 rounded border border-green-200">
+                        <div class="text-xs text-green-700">Benar</div>
+                        <div class="text-xl font-bold text-green-700" id="res-benar">0</div>
+                    </div>
+                    <div class="bg-red-50 p-3 rounded border border-red-200">
+                        <div class="text-xs text-red-700">Salah</div>
+                        <div class="text-xl font-bold text-red-700" id="res-salah">0</div>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                        <div class="text-xs text-blue-700">NILAI</div>
+                        <div class="text-2xl font-bold text-blue-800" id="res-nilai">0</div>
+                    </div>
+                </div>
+
+                <div id="violation-box" class="bg-red-100 p-3 rounded text-sm text-left hidden mb-4">
+                    <p class="font-bold text-red-800">Catatan Pelanggaran Selama Ujian:</p>
+                    <ul id="violation-list" class="list-disc pl-5 text-red-700 mt-1"></ul>
+                </div>
+
+                <button onclick="resetToLogin()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-4 rounded-lg transition shadow-md flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                    Kembali ke Halaman Login
+                </button>
+            </div>
+
+            <h3 class="font-bold text-lg mb-3">Pembahasan Soal</h3>
+            <div id="pembahasan-area" class="space-y-4">
+                <!-- Dinamis -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Peringatan Custom (Pengganti Alert) -->
+<div id="custom-alert" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm text-center transform scale-100 border-2 border-red-500">
+        <div class="text-red-500 text-5xl mb-3">⚠️</div>
+        <h3 id="alert-title" class="text-xl font-bold text-red-600 mb-2">PERINGATAN</h3>
+        <p id="alert-msg" class="text-gray-700 mb-5 font-semibold text-sm">Pesan peringatan.</p>
+        <button onclick="closeCustomAlert()" class="bg-red-600 text-white px-6 py-2 rounded font-bold w-full shadow">Saya Mengerti</button>
+    </div>
+</div>
+
+<!-- Modal Konfirmasi Submit -->
+<div id="submit-modal" class="fixed inset-0 bg-black bg-opacity-70 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md text-center">
+        <div class="text-blue-600 text-4xl mb-2">📋</div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Konfirmasi Pengumpulan</h3>
+        <p id="submit-msg" class="text-gray-600 mb-4 text-sm"></p>
+        
+        <!-- Rincian Status sebelum Kumpul -->
+        <div class="bg-gray-50 p-3 rounded-lg border text-xs text-gray-700 grid grid-cols-3 gap-2 mb-5 font-semibold">
+            <div class="bg-green-50 text-green-800 p-2 rounded border border-green-200">
+                <div>Terjawab</div>
+                <div class="text-lg font-bold" id="modal-stat-ans">0</div>
+            </div>
+            <div class="bg-yellow-50 text-yellow-800 p-2 rounded border border-yellow-200">
+                <div>Ragu-Ragu</div>
+                <div class="text-lg font-bold" id="modal-stat-doubt">0</div>
+            </div>
+            <div class="bg-red-50 text-red-800 p-2 rounded border border-red-200">
+                <div>Kosong</div>
+                <div class="text-lg font-bold" id="modal-stat-empty">0</div>
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <button onclick="closeSubmitModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 rounded-lg font-bold text-sm">Batal</button>
+            <button onclick="processSubmit()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-bold text-sm shadow">Ya, Kumpulkan</button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-80 z-[110] hidden flex flex-col items-center justify-center p-4">
+    <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+    <div class="text-white font-bold text-center" id="loading-text">Menyiapkan Ujian...</div>
+</div>
+
+<script>
+    // State Aplikasi
+    let studentData = { nama: "", kelas: "" };
+    let currentQ = 0;
+    let answers = new Array(50).fill(null);
+    let doubts = new Array(50).fill(false); // State ragu-ragu
+    let fontSizeClass = "font-size-md"; // small, md, lg, xl
+    let fontIndex = 1;
+    const fontClasses = ["font-size-sm", "font-size-md", "font-size-lg", "font-size-xl"];
+    
+    let timeLeft = 90 * 60; // 90 menit dalam detik
+    let timerInterval = null;
+    let gameState = "login"; // login, exam, result
+    
+    // Keamanan & Rekaman
+    let violationCount = 0;
+    let violationHistory = [];
+    const MAX_VIOLATIONS = 4; // 3 kali peringatan, ke-4 kumpulkan paksa
+    let mediaRecorder;
+    let recordedChunks = [];
+    let streamCamera = null;
+    let lastUserActionTime = Date.now();
+
+    window.addEventListener('DOMContentLoaded', () => {
+        checkSavedSession();
+        setupSecurityListeners();
+    });
+
+    // FUNGSI MAMPU SIMPAN SESI LOKAL
+    function saveExamState() {
+        if (gameState !== 'exam') return;
+        const state = {
+            studentData,
+            currentQ,
+            answers,
+            doubts,
+            timeLeft,
+            violationCount,
+            violationHistory,
+            timestamp: Date.now()
+        };
+        try {
+            localStorage.setItem('sts_bindo_exam_state', JSON.stringify(state));
+        } catch(e) {}
+    }
+
+    function checkSavedSession() {
+        try {
+            const saved = localStorage.getItem('sts_bindo_exam_state');
+            if (saved) {
+                const state = JSON.parse(saved);
+                if (state && state.studentData && state.studentData.nama) {
+                    document.getElementById('resume-banner').classList.remove('hidden');
+                }
+            }
+        } catch(e) {}
+    }
+
+    function restoreSession() {
+        try {
+            const saved = localStorage.getItem('sts_bindo_exam_state');
+            if (!saved) return;
+            const state = JSON.parse(saved);
+            studentData = state.studentData || { nama: "", kelas: "" };
+            currentQ = state.currentQ || 0;
+            answers = state.answers || new Array(50).fill(null);
+            doubts = state.doubts || new Array(50).fill(false);
+            timeLeft = state.timeLeft || 90 * 60;
+            violationCount = state.violationCount || 0;
+            violationHistory = state.violationHistory || [];
+
+            document.getElementById('student-name').value = studentData.nama || "";
+            document.getElementById('student-class').value = studentData.kelas || "";
+            document.getElementById('display-name').textContent = studentData.nama;
+            document.getElementById('display-class').textContent = studentData.kelas;
+
+            startExam(true);
+        } catch(e) {
+            console.error("Gagal memulihkan sesi:", e);
+        }
+    }
+
+    function clearSavedSession() {
+        try {
+            localStorage.removeItem('sts_bindo_exam_state');
+        } catch(e) {}
+    }
+
+    function toggleCameraMinimize() {
+        const container = document.getElementById('camera-preview-container');
+        const icon = document.getElementById('cam-min-icon');
+        container.classList.toggle('cam-minimized');
+        if (container.classList.contains('cam-minimized')) {
+            icon.textContent = '➕';
+        } else {
+            icon.textContent = '➖';
+        }
+    }
+
+    function requestExamPermissions() {
+        const name = document.getElementById('student-name').value.trim();
+        const kls = document.getElementById('student-class').value;
+
+        if(!name || !kls) {
+            showCustomAlert("Form Belum Lengkap", "Silakan isi Nama dan Kelas terlebih dahulu sebelum memulai ujian.");
+            return;
+        }
+
+        studentData = { nama: name, kelas: kls };
+        document.getElementById('display-name').textContent = name;
+        document.getElementById('display-class').textContent = kls;
+
+        // Langsung masuk ke lembar ujian tanpa perizinan kamera/modal
+        startExam();
+    }
+
+    function startExam(isRestored = false) {
+        document.getElementById('login-page').classList.add('hidden');
+        document.getElementById('exam-page').classList.remove('hidden');
+        gameState = "exam";
+        
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        }
+
+        renderGrid();
+        renderQuestion();
+        updateStatsBar();
+        
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            updateTimerDisplay();
+            saveExamState();
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                autoSubmit("Waktu ujian telah habis!");
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        let m = Math.floor(timeLeft / 60);
+        let s = timeLeft % 60;
+        document.getElementById('timer-display').textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        
+        if(timeLeft < 300) {
+            document.getElementById('timer-display').classList.add('text-yellow-300', 'animate-pulse');
+        }
+    }
+
+    function changeFontSize(delta) {
+        fontIndex = Math.max(0, Math.min(fontClasses.length - 1, fontIndex + delta));
+        fontSizeClass = fontClasses[fontIndex];
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const qArea = document.getElementById('question-area');
+        const qData = questionsData[currentQ];
+        
+        let html = `
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-6 ${fontSizeClass}">
+                <div class="flex justify-between items-center mb-4 border-b pb-2 text-xs">
+                    <span class="font-bold text-gray-500">Soal Ke-${currentQ + 1} dari 50</span>
+                    <button onclick="clearAnswer()" class="text-xs text-red-500 border border-red-400 px-2 py-0.5 rounded hover:bg-red-50 transition">Kosongkan Jawaban</button>
+                </div>
+        `;
+        
+        if (qData.passage) {
+            html += `<div class="bg-blue-50 p-4 rounded-lg mb-4 text-gray-800 leading-relaxed border-l-4 border-blue-500">${qData.passage}</div>`;
+        }
+
+        html += `<div class="font-semibold text-gray-800 mb-4">${qData.question}</div>`;
+        html += `<div class="space-y-3">`;
+        
+        qData.options.forEach((opt) => {
+            const optLetter = opt.charAt(0);
+            const isSelected = answers[currentQ] === optLetter;
+            const bgClass = isSelected ? 'bg-blue-100 border-blue-500 ring-2 ring-blue-300' : 'bg-gray-50 border-gray-300 hover:bg-blue-50';
+            
+            html += `
+                <div onclick="selectAnswer('${optLetter}')" class="flex items-start p-3 rounded-lg border ${bgClass} cursor-pointer transition">
+                    <div class="w-6 h-6 flex items-center justify-center rounded-full border ${isSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-400 text-gray-600 bg-white'} mr-3 text-xs font-bold flex-shrink-0 mt-0.5">
+                        ${optLetter}
+                    </div>
+                    <div class="text-gray-700">${opt.substring(3)}</div>
+                </div>
+            `;
+        });
+        
+        html += `</div></div>`;
+        qArea.innerHTML = html;
+        qArea.scrollTop = 0;
+
+        document.getElementById('btn-prev').disabled = currentQ === 0;
+        
+        const isDoubt = doubts[currentQ] || false;
+        document.getElementById('chk-doubt').checked = isDoubt;
+
+        if (currentQ === questionsData.length - 1) {
+            document.getElementById('btn-next').classList.add('hidden');
+            document.getElementById('btn-finish').classList.remove('hidden');
+        } else {
+            document.getElementById('btn-next').classList.remove('hidden');
+            document.getElementById('btn-finish').classList.add('hidden');
+        }
+
+        updateStatsBar();
+    }
+
+    function selectAnswer(letter) {
+        lastUserActionTime = Date.now();
+        answers[currentQ] = letter;
+        saveExamState();
+        renderQuestion();
+        renderGrid();
+    }
+
+    function clearAnswer() {
+        lastUserActionTime = Date.now();
+        answers[currentQ] = null;
+        saveExamState();
+        renderQuestion();
+        renderGrid();
+    }
+
+    function toggleDoubt() {
+        lastUserActionTime = Date.now();
+        doubts[currentQ] = !doubts[currentQ];
+        saveExamState();
+        renderQuestion();
+        renderGrid();
+    }
+
+    function changeQuestion(step) {
+        lastUserActionTime = Date.now();
+        const nextQ = currentQ + step;
+        if(nextQ >= 0 && nextQ < questionsData.length) {
+            currentQ = nextQ;
+            renderQuestion();
+        }
+    }
+
+    function updateStatsBar() {
+        let answered = 0;
+        let doubtCount = 0;
+        for (let i = 0; i < 50; i++) {
+            if (answers[i] !== null) answered++;
+            if (doubts[i]) doubtCount++;
+        }
+        const unanswered = 50 - answered;
+        const percent = Math.round((answered / 50) * 100);
+
+        document.getElementById('stat-answered').textContent = answered;
+        document.getElementById('stat-doubt').textContent = doubtCount;
+        document.getElementById('stat-unanswered').textContent = unanswered;
+        document.getElementById('stat-percent').textContent = percent + "%";
+    }
+
+    function toggleGrid() {
+        const modal = document.getElementById('grid-modal');
+        modal.classList.toggle('hidden');
+        if(!modal.classList.contains('hidden')) {
+            renderGrid();
+        }
+    }
+
+    function renderGrid() {
+        const container = document.getElementById('grid-container');
+        let html = '';
+        for(let i=0; i<questionsData.length; i++) {
+            const isAnswered = answers[i] !== null;
+            const isDoubt = doubts[i] === true;
+            const isActive = i === currentQ;
+            
+            let classes = "w-full aspect-square flex items-center justify-center rounded font-bold text-xs border cursor-pointer relative transition ";
+            
+            if (isActive) {
+                classes += "ring-2 ring-blue-600 ring-offset-1 ";
+            }
+
+            if (isDoubt) {
+                classes += "bg-yellow-400 text-yellow-950 border-yellow-500 ";
+            } else if (isAnswered) {
+                classes += "bg-green-500 text-white border-green-600 ";
+            } else {
+                classes += "bg-white text-gray-700 border-gray-300 hover:bg-gray-100 ";
+            }
+
+            html += `<div onclick="jumpToQuestion(${i})" class="${classes}">
+                ${i+1}
+                ${isDoubt ? '<span class="absolute top-0 right-0 w-2 h-2 bg-red-600 rounded-full m-0.5"></span>' : ''}
+            </div>`;
+        }
+        container.innerHTML = html;
+    }
+
+    function jumpToQuestion(index) {
+        lastUserActionTime = Date.now();
+        currentQ = index;
+        renderQuestion();
+        toggleGrid();
+    }
+
+    function setupSecurityListeners() {
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('blur', handleBlur);
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('copy', e => e.preventDefault());
+        document.addEventListener('cut', e => e.preventDefault());
+        document.addEventListener('paste', e => e.preventDefault());
+        document.addEventListener('selectstart', e => e.preventDefault());
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F12' || 
+               e.key === 'PrintScreen' ||
+               (e.altKey && e.key === 'Tab') ||
+               e.key === 'Meta' || e.key === 'OS' ||
+               (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C' || e.key === 'i' || e.key === 'j' || e.key === 'c')) ||
+               (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 'c' || e.key === 'C' || e.key === 'v' || e.key === 'V' || e.key === 'p' || e.key === 'P' || e.key === 's' || e.key === 'S'))
+               ) {
+                e.preventDefault();
+                if (gameState === 'exam') {
+                    triggerCheat("Mencoba menggunakan Tombol/Shortcut Pintas Terlarang (" + e.key + ")");
+                }
+            }
+        });
+    }
+
+    function handleFullscreenChange() {
+        if (!document.fullscreenElement && gameState === 'exam') {
+            triggerCheat("Keluar dari Mode Layar Penuh (Fullscreen).");
+        }
+    }
+
+    function handleVisibilityChange() {
+        if (document.visibilityState === 'hidden' && gameState === 'exam') {
+            triggerCheat("Ganti Tab / Membuka Aplikasi Lain.");
+        }
+    }
+
+    function handleBlur() {
+        if (Date.now() - lastUserActionTime < 800) return;
+
+        if (gameState === 'exam') {
+            document.body.classList.add('blur-screen');
+            triggerCheat("Jendela Ujian Kehilangan Fokus (Membuka panel/notifikasi/split screen).");
+        }
+    }
+
+    function handleFocus() {
+        document.body.classList.remove('blur-screen');
+    }
+
+    function triggerCheat(reason) {
+        if (gameState === "result") {
+            showCustomAlert("AKSES DIBATALKAN", "Dilarang mendokumentasikan hasil ujian!");
+            setTimeout(() => { location.reload(); }, 2000);
+            return;
+        }
+
+        if (gameState !== "exam") return;
+
+        violationCount++;
+        const timeLog = new Date().toLocaleTimeString('id-ID');
+        violationHistory.push(`[${timeLog}] Pelanggaran ke-${violationCount}: ${reason}`);
+        saveExamState();
+
+        if (violationCount >= MAX_VIOLATIONS) {
+            autoSubmit("Pelanggaran Maksimal Telah Tercapai! Sistem mengumpulkan jawaban secara otomatis.");
+        } else {
+            showCustomAlert(
+                `PELANGGARAN KE-${violationCount}`, 
+                `Sistem mendeteksi aktivitas mencurigakan: <br><b class="text-red-700">${reason}</b><br><br>Peringatan: Ke-${violationCount} dari maksimal ${MAX_VIOLATIONS} pelanggaran.`
+            );
+        }
+    }
+
+    function confirmSubmit() {
+        let answered = 0;
+        let doubtCount = 0;
+        for (let i = 0; i < 50; i++) {
+            if (answers[i] !== null) answered++;
+            if (doubts[i]) doubtCount++;
+        }
+        const unanswered = 50 - answered;
+
+        document.getElementById('modal-stat-ans').textContent = answered;
+        document.getElementById('modal-stat-doubt').textContent = doubtCount;
+        document.getElementById('modal-stat-empty').textContent = unanswered;
+
+        const msgEl = document.getElementById('submit-msg');
+        if (doubtCount > 0) {
+            msgEl.innerHTML = `<span class="text-yellow-600 font-bold">Perhatian: Anda masih memiliki ${doubtCount} soal dengan status Ragu-Ragu!</span>`;
+        } else if (unanswered > 0) {
+            msgEl.innerHTML = `<span class="text-red-600 font-bold">Perhatian: Ada ${unanswered} soal yang belum dijawab!</span>`;
+        } else {
+            msgEl.innerHTML = "Semua soal telah selesai dijawab dengan lengkap.";
+        }
+
+        document.getElementById('submit-modal').classList.remove('hidden');
+    }
+
+    function closeSubmitModal() {
+        document.getElementById('submit-modal').classList.add('hidden');
+    }
+
+    function autoSubmit(reason) {
+        showLoading("Menyimpan Jawaban & Mengirim Data...");
+        if(timerInterval) clearInterval(timerInterval);
+        setTimeout(() => { processSubmit(); }, 1200);
+    }
+
+    async function processSubmit() {
+        document.getElementById('submit-modal').classList.add('hidden');
+        showLoading("Mengkalkulasi Nilai dan Menyiapkan Hasil...");
+        if(timerInterval) clearInterval(timerInterval);
+        gameState = "processing";
+
+        let benar = 0;
+        answers.forEach((ans, idx) => {
+            if (ans === questionsData[idx].answer) {
+                benar++;
+            }
+        });
+        const salah = 50 - benar; 
+        const nilai = benar * 2; // 50 x 2 = 100
+
+        const payload = {
+            nama: studentData.nama,
+            kelas: studentData.kelas,
+            benar: benar,
+            salah: salah,
+            nilai: nilai,
+            jumlahPelanggaran: violationCount,
+            detailPelanggaran: violationHistory.join(" | ") || "Aman"
+        };
+
+        if (GOOGLE_SHEET_URL && GOOGLE_SHEET_URL !== "") {
+            try {
+                await fetch(GOOGLE_SHEET_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch(e) {
+                console.error("Gagal kirim data:", e);
+            }
+        }
+
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            try { mediaRecorder.stop(); } catch(e){}
+        }
+        if (streamCamera) {
+            streamCamera.getTracks().forEach(track => track.stop());
+        }
+        document.getElementById('camera-preview-container').classList.add('hidden');
+
+        clearSavedSession();
+        hideLoading();
+        showResults(benar, salah, nilai);
+    }
+
+    function showResults(benar, salah, nilai) {
+        document.getElementById('exam-page').classList.add('hidden');
+        document.getElementById('result-page').classList.remove('hidden');
+        gameState = "result";
+
+        document.getElementById('res-benar').textContent = benar;
+        document.getElementById('res-salah').textContent = salah;
+        document.getElementById('res-nilai').textContent = nilai;
+
+        if (violationCount > 0) {
+            document.getElementById('violation-box').classList.remove('hidden');
+            const ul = document.getElementById('violation-list');
+            ul.innerHTML = '';
+            violationHistory.forEach(v => {
+                const li = document.createElement('li');
+                li.textContent = v;
+                ul.appendChild(li);
+            });
+        }
+
+        const pembArea = document.getElementById('pembahasan-area');
+        let html = '';
+        questionsData.forEach((q, idx) => {
+            const myAns = answers[idx];
+            const isCorrect = myAns === q.answer;
+            const statusClass = isCorrect ? 'border-green-400 bg-green-50' : 'border-red-400 bg-red-50';
+            const statusIcon = isCorrect ? '✅ BENAR' : (myAns === null ? '⚪ KOSONG' : '❌ SALAH');
+            
+            html += `
+                <div class="border ${statusClass} rounded-lg p-4 mb-4 shadow-sm text-sm">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-bold">Soal ${idx + 1}</span>
+                        <span class="font-bold text-xs ${isCorrect ? 'text-green-600' : 'text-red-600'}">${statusIcon}</span>
+                    </div>
+                    <p class="text-gray-800 mb-3">${q.question}</p>
+                    <div class="text-xs space-y-1 mb-3">
+                        <p>Jawaban Anda: <b>${myAns || '-'}</b> ${doubts[idx] ? '<span class="text-yellow-700">(Ditandai Ragu-Ragu)</span>' : ''}</p>
+                        <p>Kunci Jawaban: <b>${q.answer}</b></p>
+                    </div>
+                    <div class="bg-white bg-opacity-75 p-2.5 rounded text-xs text-gray-700 border-t border-dashed">
+                        <b>Pembahasan:</b> ${q.alasan}
+                    </div>
+                </div>
+            `;
+        });
+        pembArea.innerHTML = html;
+    }
+        
+    function resetToLogin() {
+        clearSavedSession();
+        location.reload();
+    }
+
+    function showCustomAlert(title, msg) {
+        document.getElementById('alert-title').innerHTML = title;
+        document.getElementById('alert-msg').innerHTML = msg;
+        document.getElementById('custom-alert').classList.remove('hidden');
+    }
+
+    function closeCustomAlert() {
+        document.getElementById('custom-alert').classList.add('hidden');
+    }
+
+    function showLoading(text) {
+        document.getElementById('loading-text').textContent = text;
+        document.getElementById('loading-overlay').classList.remove('hidden');
+    }
+
+    function hideLoading() {
+        document.getElementById('loading-overlay').classList.add('hidden');
+    }
+</script>
+</body>
+</html>
